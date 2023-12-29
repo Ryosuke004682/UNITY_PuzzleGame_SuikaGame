@@ -18,7 +18,7 @@ public class GameManager : MonoBehaviour
     /*現在のアイテム*/
     BubbleController currentBubble;
     /*生成位置*/
-    const float SpawnItemY = 3.5f;
+    const float SPAWN_ITEM_Y = 3.5f;
     /*Audioの再生装置*/
     AudioSource audioSource;
 
@@ -31,8 +31,34 @@ public class GameManager : MonoBehaviour
 
     private void Update( )
     {
-        
+        if (!currentBubble) return;
+        MoveItem();
     }
+
+    /// <summary>
+    /// アイテムの移動処理
+    /// </summary>
+    private void MoveItem()
+    {
+        //マウス座標からWorld座標に変換
+        Vector2 worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+
+        //x座標をマウスに合わせる
+        Vector2 bubblePosition = new Vector2(worldPoint.x , SPAWN_ITEM_Y);
+        currentBubble.transform.position = bubblePosition;
+
+        //タッチ処理
+        if (Input.GetMouseButtonUp(0))
+        {
+            //重力をセットして落とす
+            currentBubble.GetComponent<Rigidbody2D>().gravityScale = 1;
+            currentBubble = null;
+
+            //次のアイテムをセット
+            StartCoroutine(SpawnCurrentItem());
+        }
+    }
+
 
     /// <summary>
     /// アイテム生成
@@ -66,7 +92,7 @@ public class GameManager : MonoBehaviour
     {
         yield return new WaitForSeconds(1.0f);
 
-        currentBubble = SpawnItem(new Vector2(0 , SpawnItemY));
+        currentBubble = SpawnItem(new Vector2(0 , SPAWN_ITEM_Y));
         
         //取得したコンポーネントは重力フリーにして、持ってる時に下に落ちないように設定。
         currentBubble.GetComponent<Rigidbody2D>().gravityScale = 0;
