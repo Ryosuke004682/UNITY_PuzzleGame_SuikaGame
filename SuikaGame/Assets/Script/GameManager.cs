@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -22,11 +23,16 @@ public class GameManager : MonoBehaviour
     /*Audioの再生装置*/
     AudioSource audioSource;
 
+
+    public float LeapLinearInterpolation = 0.5f;//補間するまでの時間
+
+
     private void Start( )
     {
-        panelResult.SetActive( false );
-
         StartCoroutine(SpawnCurrentItem());
+        panelResult.SetActive(false);
+
+        audioSource = GetComponent<AudioSource>();
     }
 
     private void Update( )
@@ -56,6 +62,9 @@ public class GameManager : MonoBehaviour
 
             //次のアイテムをセット
             StartCoroutine(SpawnCurrentItem());
+
+            //SEの設定
+            audioSource.PlayOneShot(seDrop);
         }
     }
 
@@ -98,5 +107,64 @@ public class GameManager : MonoBehaviour
         currentBubble.GetComponent<Rigidbody2D>().gravityScale = 0;
     }
     
+    /// <summary>
+    /// アイテムを合体させる
+    /// </summary>
+    /// <param name="bubbleA"></param>
+    /// <param name="bubbleB"></param>
+    public void Merage(BubbleController bubbleA , BubbleController bubbleB)
+    {
+        //操作中のアイテムとぶつかった場合GameOver
+        if(currentBubble == bubbleA || currentBubble == bubbleB)
+        {
+            enabled = false;
+            panelResult.SetActive(true);
+
+            return;
+        }
+
+        
+        if (bubbleA.IsMarged  || bubbleB.IsMarged)  return;
+        if (bubbleA.colorType != bubbleB.colorType) return;
+
+        int nextColor = bubbleA.colorType + 1;
+        if (prefabBubbles.Count - 1 < nextColor) return;
+
+        Vector2 lerpPosition = 
+            Vector2.Lerp
+            (
+                bubbleA.transform.position ,
+                bubbleB.transform.position ,
+                LeapLinearInterpolation
+            );
+
+        //新しいアイテムの生成
+        BubbleController newBubble = SpawnItem(lerpPosition , nextColor);
+
+        //マージ済みのフラグをあげる
+        bubbleA.IsMarged = true;
+        bubbleB.IsMarged = true;
+
+        //シーンから削除
+        Destroy(bubbleA.gameObject);
+        Destroy(bubbleB.gameObject);
+
+        //点数計算と表示計算（スコア処理）
+
+        score += newBubble.colorType * 10;
+        textScore.text = "" + score;
+
+        //SE再生
+        audioSource.PlayOneShot(seMerge);
+
+    }
+
+    /// <summary>
+    /// リトライボタンの処理
+    /// </summary>
+    public void OnClickRetry()
+    {
+        SceneManager.LoadScene("GameScene");
+    }
 
 }
